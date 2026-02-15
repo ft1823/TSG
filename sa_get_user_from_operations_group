@@ -1,0 +1,35 @@
+string standalone.sa_get_user_from_operations_group()
+{
+get_assigned = Map();
+get_assigned.put("feature","group_users");
+get_assigned.put("related_entity_id","4694195000123579130");
+get_assigned.put("type","ActiveUsers");
+get_assigned.put("fields",{"id","full_name","email"});
+get_assigned.put("include_lite_users",true);
+payload = {"get_assigned":get_assigned};
+operationsGroupResponse = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v7/users/actions/get_assigned"
+	type :POST
+	parameters:payload.toString()
+	connection:"zoho_crm_users"
+];
+if(operationsGroupResponse.get("get_assigned") == 0 || operationsGroupResponse.get("get_assigned").size() == 0)
+{
+	return "";
+}
+//
+operationsGroupUsers = Map();
+usersList = List();
+for each  item in operationsGroupResponse.get("get_assigned")
+{
+	//info item;
+	usersList.add(item.get("id"));
+	operationsGroupUsers.put("id",item.get("id"));
+	operationsGroupUsers.put("name",item.get("full_name"));
+	operationsGroupUsers.put("email",item.get("email"));
+}
+//scheduler = operationsGroupUsers.keys().get(0);
+info operationsGroupUsers;
+return operationsGroupUsers;
+}
