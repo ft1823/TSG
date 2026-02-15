@@ -1,0 +1,51 @@
+string standalone.ft_create_tasks(String module,String recordId,String subject,String due_date,String owner,String type)
+{
+// delete this section ===================
+deal = zoho.crm.getRecordById("Deals",recordId);
+
+// ======================================
+l_query = zoho.crm.searchRecords("Tasks","Type:equals:" + type);
+m_sametask = null;
+for each  m_task in l_query
+{
+	if(m_task.get("$se_module") != module)
+	{
+		continue;
+	}
+	if(m_task.get("What_Id").get("id") != recordId)
+	{
+		continue;
+	}
+	if(m_task.get("Type") != type)
+	{
+		continue;
+	}
+	m_sametask = m_task;
+	break;
+}
+date = due_date.toString("yyyy-MM-dd");
+if(m_sametask != null)
+{
+	info "update";
+	data = Map();
+	data.put("Due_Date",date);
+	data.put("Owner",owner);
+	data.put("Status","Not Started");
+	return zoho.crm.updateRecord("Tasks",m_sametask.get("id"),data);
+}
+else
+{
+	info "create";
+	data = Map();
+	data.put("Subject",subject);
+	data.put("What_Id",recordId);
+	data.put("Type",type);
+	data.put("Due_Date",date);
+	data.put("Owner",owner);
+	data.put("$se_module",module);
+	remindTime = date + "T09:00:00-04:00";
+	remindAt = {"ALARM":"FREQ=NONE;ACTION=EMAILANDPOPUP;TRIGGER=DATE-TIME:" + remindTime};
+	data.put("Remind_At",remindAt);
+	return zoho.crm.createRecord("Tasks",data,{"trigger":{"workflow"}});
+}
+}
