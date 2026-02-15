@@ -1,0 +1,53 @@
+
+/** 
+ * log("sample logging statement") --> can be used to print any data in the browser console.
+ * ZDK module can be used for customising the UI and other functionalities.
+ * return false to prevent <SAVE> action
+**/
+
+
+    
+if (field_name === "Change_Text_Color") {
+        const field = ZDK.Page.getField("Change_Text_Color");
+        field.setValue(null);
+        const colorField = ZDK.Page.getField("Text_Color")
+        ZDK.Client.openCallout(
+            {
+                api_name: "Color_Picker",
+                type: 'widget',
+                header: "Color Picker",
+                height: '330px',
+                width: '300px',
+                close_on_body_click: false,
+                close_icon: true,
+                header: undefined
+            },
+            { type: 'field', api_name: 'Text_Color' },
+              {
+                color: colorField.getValue(),
+                api_name:"Text_Color"
+            }
+        );
+}
+else if (field_name === "Change_Background_Color") {
+        const field = ZDK.Page.getField("Change_Background_Color");
+        field.setValue(null);
+        const colorField = ZDK.Page.getField("Background_Color")
+        ZDK.Client.openCallout(
+            {
+                api_name: "Color_Picker",
+                type: 'widget',
+                header: "Color Picker",
+                height: '330px',
+                width: '300px',
+                close_on_body_click: false,
+                close_icon: true,
+                header: undefined
+            },
+            { type: 'field', api_name: 'Background_Color' },
+          {
+                color: colorField.getValue(),
+                api_name:"Background_Color"
+            }
+        );
+}
