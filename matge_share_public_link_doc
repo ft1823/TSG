@@ -1,0 +1,66 @@
+//response = zoho.writer.getMergeFields("0go628e26cf44539e4b94a6da813b0ab9d0ff", "zoho_writer");
+	document_id = "0go628e26cf44539e4b94a6da813b0ab9d0ff"; 
+                fields = Map(); 
+                fields.put("Name", "Ms.Amelia");
+                fields.put("Tamil", "S");
+                fields.put("English", "A");
+                fields.put("Maths", "A");
+                fields.put("Remark", "Good");
+                data_map = Map();
+                data_map.put("record_id", "7112216000001613928");
+                merge_details = Map();
+                merge_details.put("record_id", "7112216000001613928");
+                optional_settings= Map();
+               // optional_settings.put("sign_service_name","zohosign");
+               optional_settings.put("test_mode", "true");
+                output_settings = Map();
+                output_settings.put("doc_name","Student Grade2");
+                output_settings.put("folder_id","nelol79c5e076c34b406fa848608ddbd6eae1");   //Workdrive Folder ID  //optional
+                output_settings.put("output_format","pdf");    //docx|pdfform|pdf  //optional
+             //   output_settings.put("password","*****");    //optional
+                output_settings.put("overwrite_existing_file","true");  //true|false  //optional
+                response = zoho.writer.v2.mergeAndStore(document_id, merge_details, output_settings, optional_settings, "zoho_writer");
+				record_info = response.get("records").get(0);
+			    workdrive_file_id = record_info.get("document_id");
+			share_body = Map();
+//info "D: "+workdrive_file_id;
+share_body = Map();
+
+attributes = Map();
+attributes.put("resource_id",workdrive_file_id);
+attributes.put("link_name", "Student Grade Public Link");
+attributes.put("request_user_data", false);
+attributes.put("allow_download", false); 
+//attributes.put("link_type", "download");
+
+// Optional settings (uncomment if needed)
+// attributes.put("password_text", "yourpassword");
+// attributes.put("expiration_date", "2026-12-31");
+data_map = Map();
+data_map.put("attributes", attributes);
+data_map.put("type", "links");
+share_body.put("data", data_map);
+header = Map();
+header.put("Accept","application/vnd.api+json");
+response = invokeurl
+[
+url :"https://www.zohoapis.com/workdrive/api/v1/links"
+type : POST
+ parameters: share_body.toString()
+headers : header
+
+connection : "zoho_writer"
+];
+info response;
+// info response;
+// share_response = invokeurl
+// [
+//     url :"https://www.zohoapis.com/workdrive/api/v1/links/nelol9c080f964f984694abeca5bb5e3ecdd3"
+//     type : GET
+//     connection:"zoho_writer"
+// ];
+
+//public_url = share_response.get("data").get("attributes").get("permalink");
+//info public_url;
+
+return "";
