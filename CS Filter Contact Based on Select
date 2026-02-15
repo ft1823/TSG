@@ -1,0 +1,30 @@
+var clientField = ZDK.Page.getField("Account_Name");
+var contactField = ZDK.Page.getField("Contact_Name");
+
+if (clientField.getValue() != undefined && clientField.getValue() != null) {
+    var clientId = clientField.getValue().id;
+    var relatedContacts = ZDK.Apps.CRM.Accounts.fetchRelatedRecords(clientId, "Contacts");
+    // One Related Contact
+    if (relatedContacts.length == 1) {
+        console.log(relatedContacts);
+        var contactId = relatedContacts[0].id;
+        var contactName = relatedContacts[0].Full_Name;
+        contactField.setValue({id: contactId, name:contactName});
+    }
+    // More One Related Contact
+    if (relatedContacts.length > 1) {
+        var ids = "";
+        for(var i=0; i< relatedContacts.length; i++){
+            ids = ids + relatedContacts[i].id + ",";
+        }
+        ids = ids.replace(/,\s*$/, "");
+        contactField.setCriteria("((id:in:" + ids +"))", { filterOnSearch: true });
+    }
+
+    if (relatedContacts.length == 0) {
+        contactField.setCriteria("(filtered:equals:false)");
+    }
+     
+} else {
+        contactField.setCriteria("(filtered:equals:false)");
+}
