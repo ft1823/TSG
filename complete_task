@@ -1,0 +1,24 @@
+string standalone.ft_complete_task(String recordId,String parentModule,String taskType)
+{
+tasks = zoho.crm.getRelatedRecords("Tasks",parentModule,recordId);
+if(tasks.size() == 0)
+{
+	return "";
+}
+resp = "";
+ownerId = "";
+tasksForUpdate = List();
+for each  item in tasks
+{
+	if(item.get("Type") == taskType)
+	{
+		tasksForUpdate.add({"id":item.get("id"),"Status":"Completed"});
+		ownerId = item.get("Owner").get("id");
+	}
+}
+if(tasksForUpdate.size() > 0)
+{
+	resp = zoho.crm.bulkUpdate("Tasks",tasksForUpdate);
+}
+return ownerId;
+}
