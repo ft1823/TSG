@@ -1,0 +1,65 @@
+function fill_subforms_on_quote_temlate_change(){
+    var lineItemsList = [];
+	var otherLineItemsList = [];
+    var feeScheduleItemsList = [];
+
+    var quoteTemplateField = ZDK.Page.getField("Quote_Template");
+    var quoteSubform = ZDK.Page.getField("Quoted_Items");
+	var quoteOtherSubform = ZDK.Page.getField("Other_Items");
+    var quotedFeeScheduleSubform = ZDK.Page.getField("Fee_Schedule");
+//
+    if (quoteTemplateField != null) {
+
+        quoteId = quoteTemplateField.getValue().id;
+        var quoteTemplate = ZDK.Apps.CRM.Quote_Templates.fetchById(quoteId);
+        var subform = quoteTemplate.Items;
+        var feeScheduleSubform = quoteTemplate.Fee_Schedule_Template;
+        console.log(subform);
+        // Items
+        if (subform != null && subform.length > 0) {
+            for (var i = 0; i < subform.length; i++) {
+                var productName = subform[i].Product;
+                var price = subform[i].Unit_Price;
+                var qtyRequired = subform[i].Qty_Required;
+                var otherCharges = subform[i].Other_Charges;
+                var qty = 1;
+                if (qtyRequired == true) {
+                    qty = "";
+                }
+				const lineItems = {
+						"Product_Name": productName,
+						"Quantity": qty,
+						"List_Price": price,
+					};				
+				 if (otherCharges == true) {
+					 otherLineItemsList.push(lineItems);
+				}
+				else{
+					lineItemsList.push(lineItems);
+				}
+               
+               
+            }
+        }
+        // feeScheduleSubform
+        if (feeScheduleSubform != null && feeScheduleSubform.length > 0) {
+            for (var i = 0; i < feeScheduleSubform.length; i++) {
+                var milestone = feeScheduleSubform[i].Milestone;
+				var description = feeScheduleSubform[i].Description;
+                const linefeeScheduleItems = {
+                    "Milestone": milestone,
+					"Description":description
+                };
+                feeScheduleItemsList.push(linefeeScheduleItems);
+            }
+        }
+        //
+        ZDK.Page.getForm().setValues({'Quoted_Items': lineItemsList });
+		ZDK.Page.getForm().setValues({'Other_Items': otherLineItemsList });
+        ZDK.Page.getForm().setValues({'Fee_Schedule': feeScheduleItemsList});
+    } else {
+        ZDK.Page.getForm().setValues({ 'Quoted_Items': lineItemsList });
+		ZDK.Page.getForm().setValues({'Other_Items': otherLineItemsList });
+        ZDK.Page.getForm().setValues({'Fee_Schedule': feeScheduleItemsList});
+    }
+}
