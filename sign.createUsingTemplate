@@ -1,0 +1,78 @@
+string standalone.sa_meetenig_sign_document(Int meetingId)
+{
+/*r = zoho.sign.getTemplateById(192847000000681141, "zoho_sign");
+info r;
+*/
+//
+response = null;
+templateId = "192847000000681141";
+// Client Variables
+clientId = null;
+clientName = "";
+// Data Variable
+nowDate = now.toDate().toString("MMM dd yyyy");
+//
+dealId = null;
+meetingDetails = zoho.crm.getRecordById("Events",meetingId);
+if(meetingDetails.get("$se_module") == "Deals")
+{
+	if(meetingDetails.get("What_Id") != null)
+	{
+		dealId = meetingDetails.get("What_Id").get("id");
+	}
+}
+if(dealId != null)
+{
+	dealDetails = zoho.crm.getRecordById("Deals",dealId.toLong());
+	account = dealDetails.get("Account_Name");
+	contact = dealDetails.get("Contact_Name");
+	if(contact != null)
+	{
+		contactRecord = zoho.crm.getRecordById("Contacts",contact.get("id"));
+		clientEmail = contactRecord.get("Email");
+	}
+	if(account != null)
+	{
+		accountId = account.get("id");
+		clientName = account.get("name");
+		clientDetails = zoho.crm.getRecordById("Accounts",accountId);
+		if(clientEmail == null)
+		{
+			clientEmail = clientDetails.get("Main_Email_address");
+		}
+		if(clientEmail != null)
+		{
+			//
+			actionMap = Map();
+			fieldsTextData = Map();
+			fieldsDateData = Map();
+			fieldsTextData.put("Company",clientName);
+			fieldsDateData.put("Sign Date",nowDate);
+			// Put Fields to Template
+			actionMap.put("field_data",{"field_text_data":fieldsTextData,"field_date_data":fieldsDateData});
+			actionMap.put("request_name","Gap Analysis Agreement - " + clientName);
+			cd = {"source":"CRM","module":"Deals","record":dealId};
+			actionMap.put("custom_data",cd.toString());
+			// Document Actions
+			eachActionMap1 = Map();
+			eachActionMap1.put("recipient_name",clientName);
+			eachActionMap1.put("recipient_email",clientEmail);
+			eachActionMap1.put("action_type","SIGN");
+			eachActionMap1.put("action_id","192847000000681162");
+			eachActionMap1.put("role","Client");
+			eachActionMap1.put("verify_recipient","false");
+			eachActionMap1.put("is_embedded",true);
+			fieldList = List();
+			fieldList.add(eachActionMap1);
+			actionMap.put("actions",fieldList);
+			submitMap = Map();
+			submitMap.put("templates",actionMap);
+			parameters = Map();
+			parameters.put("is_quicksend",true);
+			parameters.put("data",submitMap);
+			response = zoho.sign.createUsingTemplate(templateId,parameters,"zoho_sign");
+		}
+	}
+}
+return response;
+}
