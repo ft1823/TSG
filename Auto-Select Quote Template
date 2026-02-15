@@ -1,0 +1,8 @@
+
+ZDK.Client.showLoader({ type: 'page', template: 'vertical-bar', message: 'Copying the Quote template ...' });
+try {
+    fill_subforms_on_deal_change();
+    ZDK.Client.hideLoader();
+} catch (e) {
+    ZDK.Client.hideLoader();
+}
