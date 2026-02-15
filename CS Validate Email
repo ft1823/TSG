@@ -1,0 +1,48 @@
+
+/** 
+ * log("sample logging statement") --> can be used to print any data in the browser console.
+ * ZDK module can be used for customising the UI and other functionalities.
+ * return false to prevent <SAVE> action
+**/
+
+
+if (transition.name == 'Schedule Gap Analysis' || transition.name == 'Generate Proposal') {
+    var contactField = ZDK.Page.getField("Contact_Name");
+    if (contactField.getValue() != null) {
+        var contactId = contactField.getValue().id;
+        var contact = ZDK.Apps.CRM.Contacts.fetchById(contactId);
+        var contactEmail = contact.Email;
+        if (contactEmail == null || contactEmail == "") {
+            var email = ZDK.Client.getInput([{ type: 'text', label: 'Contact Email' }], 'Please, enter the contact\'s email', 'OK', 'Cancel');
+            console.log(email);
+            //
+            if (email == null || email == undefined || email == "") {
+                return false;
+            }
+            if (email != null && email != undefined) {
+                var emailAddress = email[0];
+                if (emailAddress.indexOf("@") > -1) {
+                    try {
+                        contact.Email = emailAddress;
+                        var response = contact.__update();
+                        console.log(response);
+                    } catch (e) {
+                        let errorMessage = "Some Error While Saving Email";
+                        let error = JSON.parse(e.message);
+                        if (error.hasOwnProperty("data")) {
+                            errorMessage = error.data[0].message;
+                        }
+                        ZDK.Client.showAlert("Email Saving Error: " + errorMessage);
+                        return false;
+                    }
+                } else {
+                    ZDK.Client.showMessage('Email Address not valid');
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+        }
+    }
+}
