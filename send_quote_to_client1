@@ -1,0 +1,83 @@
+void automation.send_quote_to_client(Int quoteId)
+{
+quote = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v7/Quotes/" + quoteId
+	type :GET
+	connection:"zoho_crm"
+];
+quoteDetails = quote.getJSON("data").get(0);
+deal = quoteDetails.get("Deal_Name");
+dealDetails = null;
+if(deal != null)
+{
+	dealId = deal.get("id");
+	dealName = deal.get("name");
+	dealDetails = zoho.crm.getRecordById("Deals",dealId);
+	info "dealName : " + dealName;
+	contact = dealDetails.get("Contact_Name");
+	info "Contact: " + contact;
+	if(contact != null)
+	{
+		contactRecord = zoho.crm.getRecordById("Contacts",contact.get("id"));
+		clientEmail = contactRecord.get("Email");
+		accountName = contact.get("name");
+	}
+	account = dealDetails.get("Account_Name");
+	if(account != null)
+	{
+		accountId = account.get("id");
+		accountDetails = zoho.crm.getRecordById("Accounts",accountId.toLong());
+		if(clientEmail == null)
+		{
+			clientEmail = accountDetails.get("Main_Email_address");
+		}
+		if(accountName == null)
+		{
+			accountName = account.get("name");
+		}
+		//
+		if(clientEmail != null)
+		{
+			emailTemplateId = "7112216000001142134";
+			dataMap = Map();
+			dataList = List();
+			//From
+			dataMap.put("from",{"email":zoho.loginuserid});
+			//
+			toList = List();
+			toList.add({"email":clientEmail});
+			dataMap.put("to",toList);
+			//
+			dataMap.put("template",{"id":"7112216000001142003"});
+			inventoryMap = Map();
+			inventoryMap.put("inventory_template",{"id":"7112216000001142169"});
+			dataMap.put("inventory_details",inventoryMap);
+			dataMap.put("org_email",true);
+			dataList.add(dataMap);
+			//
+			paramMap = Map();
+			paramMap.put("data",dataList);
+			info "paramMap: " + paramMap;
+			//
+			//Be sure to update your URL Based on your Data Centre
+			sendDealEmail = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v3/Quotes/" + quoteId + "/actions/send_mail"
+				type :POST
+				parameters:paramMap.toString()
+				connection:"zoho_writer"
+			];
+			info sendDealEmail;
+			//What you want to see after the button is pressed inside the return statement.
+			standalone.sa_complate_task("Deals",dealId,"Pending Quote");
+			subject = "Follow-up on quote - " + dealDetails.get("Deal_Name");
+			dueDate = zoho.currentdate.addDay(2);
+			owner = dealDetails.get("Owner").get("id");
+			standalone.ft_create_tasks("Quotes",quoteId,subject,dueDate,owner,"Proposal Follow-up");
+			info "Proposal Created & Sent to Contact Email: " + clientEmail;
+		}
+	}
+}
+//return "response.toString()";
+}
