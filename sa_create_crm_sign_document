@@ -1,0 +1,21 @@
+string standalone.sa_create_crm_sign_document(Int dealId,String documentName,String documentId,String email)
+{
+//
+dealDetails = zoho.crm.getRecordById("Deals",dealId.toLong());
+deadLine = now.toDate().addDay(7);
+account = dealDetails.get("Account_Name");
+dataMap = Map();
+dataMap.put("Name",documentName);
+dataMap.put("Email",email);
+dataMap.put("zohosign__Deal",dealId);
+dataMap.put("zohosign__Account",account);
+dataMap.put("zohosign__Date_Sent",now.toDate());
+dataMap.put("zohosign__Document_Deadline",deadLine.toDate());
+dataMap.put("zohosign__ZohoSign_Document_ID",documentId);
+dataMap.put("zohosign__DeleteEdit_Preview_or_Position_Signature_Fields",true);
+dataMap.put("zohosign__Module_Name","Deals");
+dataMap.put("zohosign__Module_Record_ID",dealId.toString());
+dataMap.put("zohosign__Document_Status","Out for Signature");
+info zoho.crm.createRecord("zohosign__ZohoSign_Documents",dataMap);
+return "";
+}
