@@ -1,0 +1,61 @@
+string standalone.sa_zoho_sign_status_handle(String crmAPIRequest)
+{
+//
+crmAPIRequestMap = crmAPIRequest.toMap();
+documentName = "Gap Assessment Confidentiality and Non-Disclosure Agreement";
+request_body = crmAPIRequestMap.get("body");
+if(request_body.containKey("requests"))
+{
+	documentId = request_body.getJSON("requests").getJSON("document_ids").get(0).getJSON("document_id");
+	documentHookName = request_body.getJSON("requests").getJSON("document_ids").get(0).getJSON("document_name");
+	// 	if(documentName == documentHookName)
+	// 	{
+	status = request_body.getJSON("requests").getJSON("request_status");
+	records = zoho.crm.searchRecords("zohosign__ZohoSign_Documents","(zohosign__ZohoSign_Document_ID:equals:" + documentId + ")");
+	if(records.size() > 0)
+	{
+		needleDocument = records.get(0);
+		recordId = needleDocument.get("id");
+		if(status.equals("completed"))
+		{
+			zoho.crm.updateRecord("zohosign__ZohoSign_Documents",recordId,{"zohosign__Document_Status":"Signed"},{"trigger":{"workflow"}});
+		}
+		else if(status.equals("inprogress"))
+		{
+			zoho.crm.updateRecord("zohosign__ZohoSign_Documents",recordId,{"zohosign__Document_Status":"In Progress"});
+		}
+		else
+		{
+			zoho.crm.updateRecord("zohosign__ZohoSign_Documents",recordId,{"zohosign__Document_Status":status.proper()});
+		}
+	}
+	//
+	notificationObj = request_body.get("notifications").toMap();
+	if(status.equals("completed") && notificationObj.get("operation_type").equals("RequestCompleted"))
+	{
+		requestStr = request_body.get("requests");
+		requestObj = requestStr.toMap();
+		requestId = requestObj.get("request_id");
+		document_ids = requestObj.get("document_ids");
+		// Attach Documents
+		for each  document in document_ids
+		{
+			document_id = document.get("document_id");
+			//Download Document 
+			fileResponse = invokeurl
+			[
+				url :"https://sign.zoho.com/api/v1/requests/" + requestId + "/documents/" + document_id + "/pdf"
+				type :GET
+				connection:"zoho_sign"
+			];
+			docName = fileResponse.getFileName();
+			fileResponse.setFileName(docName);
+			zoho.crm.attachFile("zohosign__ZohoSign_Documents",recordId,fileResponse);
+			zoho.crm.updateRecord("zohosign__ZohoSign_Documents",recordId,{"zohosign__Date_Completed":now.toDate()});
+		}
+	}
+	// 	}
+}
+info crmAPIRequest;
+return "";
+}
