@@ -1,0 +1,150 @@
+string standalone.ivr_status(String phoneNumber,String saleNumber,String channel)
+{
+info phoneNumber;
+info saleNumber;
+info channel;
+c_booksOrgID = "912935976";
+start = zoho.currentdate.toString("yyyy-MM-dd'T'HH:mm:ssXXX","America/New_York");
+end = zoho.currentdate.addMonth(1).toString("yyyy-MM-dd'T'HH:mm:ssXXX","America/New_York");
+info start;
+sales = Collection();
+msg = "";
+success = false;
+phoneNumberDispaly = phoneNumber;
+//phoneNumberDispaly = phoneNumber.replaceAll("(?)"," ",false);
+if(phoneNumber.length() >= 10)
+{
+	if(phoneNumber.length() == 12)
+	{
+		searchPhone = phoneNumber.subString(2);
+	}
+	else
+	{
+		searchPhone = phoneNumber;
+	}
+	//	searchPhone = " +13478533572";
+	info phoneNumber.length();
+	phoneNumberDispaly = searchPhone.replaceAll("(?)"," ",false);
+	search_map = {"phone_contains":searchPhone};
+	booksResponse = zoho.books.getRecords("Contacts",c_booksOrgID,search_map,"zoho_books");
+	if(booksResponse.getJSON("message") == "success" && booksResponse.getJSON("contacts").size() > 0)
+	{
+		booksContactId = booksResponse.getJSON("contacts").get(0).get("contact_id");
+		contact_name = booksResponse.getJSON("contacts").get(0).get("contact_name");
+		//info "customerId: " + booksContactId;
+		//return {"customerBooksId":booksContactId};
+	}
+	info booksResponse;
+	phoneNumber = phoneNumber.subString(2);
+	if(booksContactId != null)
+	{
+		info "customerId: " + booksContactId;
+		searchMap = Map();
+		searchMap.put("customer_id",booksContactId);
+		searchMap.put("status","pending");
+		// Fetch Sales Orders
+		response = zoho.books.getRecords("SalesOrders",c_booksOrgID,searchMap,"zoho_books");
+		salesOrders = response.get("salesorders");
+		searchMap.put("status","draft");
+		response = zoho.books.getRecords("SalesOrders",c_booksOrgID,searchMap,"zoho_books");
+		salesOrders.addAll(response.get("salesorders"));
+		searchMap.put("status","open");
+		response = zoho.books.getRecords("SalesOrders",c_booksOrgID,searchMap,"zoho_books");
+		salesOrders.addAll(response.get("salesorders"));
+		info salesOrders;
+		if(salesOrders != null && !salesOrders.isEmpty())
+		{
+			success = true;
+			voiceMessage = "You have " + salesOrders.size() + " open orders. ";
+			smsMessage = "Open Orders:\n";
+			for each  so in salesOrders
+			{
+				orderNumber = so.get("salesorder_number");
+				status = so.get("status");
+				total = so.get("total");
+				currency = so.get("currency_code");
+				shipped_status = so.get("shipped_status");
+				cf_pickup_delivery = so.get("delivery_method");
+				cf_delivery_date = so.get("shipment_date");
+				info "cf_pickup_delivery: " + cf_pickup_delivery;
+				info "cf_delivery_date: " + cf_delivery_date;
+				// Base message
+				orderMsg = "";
+				// 1️⃣ Not fulfilled
+				if(shipped_status != "fulfilled")
+				{
+					orderMsg = "Your order is in progress.";
+				}
+				else
+				{
+					// 2️⃣ Fulfilled
+					if(cf_pickup_delivery != null && cf_pickup_delivery.trim() != "")
+					{
+						if(cf_pickup_delivery != null && cf_pickup_delivery.contains("Pickup"))
+						{
+							orderMsg = "Your order is ready for pickup.";
+						}
+						else if(cf_pickup_delivery != null && cf_pickup_delivery.contains("Delivery"))
+						{
+							if(cf_delivery_date == null || cf_delivery_date == "")
+							{
+								orderMsg = "Your order is ready and will be delivered soon. You will be updated shortly with the delivery date.";
+							}
+							else
+							{
+								orderMsg = "Your order is ready and scheduled for delivery on " + cf_delivery_date + ".";
+							}
+						}
+					}
+					else
+					{
+						// Fallback safety
+						orderMsg = "Your order is ready.";
+					}
+				}
+				// 📞 Voice message
+				if(channel == "voice")
+				{
+					msg = msg + "Order number " + orderNumber + ". " + orderMsg + " ";
+				}
+				// 📩 SMS message
+				if(channel == "sms")
+				{
+					msg = msg + "Order #" + orderNumber + ": " + orderMsg + "\n";
+				}
+			}
+			if(channel == "voice")
+			{
+				msg = voiceMessage + msg;
+			}
+			// 📩 SMS message
+			if(channel == "sms")
+			{
+				msg = smsMessage + msg + "\nThanks for choosing Chairos Matzos!";
+			}
+		}
+	}
+	else
+	{
+		msg = "We are sorry, we could not find this phone number " + phoneNumberDispaly + ", in our system, please try again";
+		if(channel == "sms")
+		{
+			msg = "We are sorry, we could not find this phone number " + phoneNumberDispaly + " in our system.";
+		}
+	}
+}
+if(salesOrders.size() == 0)
+{
+	msg = "We are sorry, we could not find any orders associated with this phone number " + phoneNumberDispaly + ", please try again";
+	if(channel == "sms")
+	{
+		msg = "We are sorry, we could not find any orders associated with this phone number " + phoneNumberDispaly;
+	}
+}
+output_map = Map();
+output_map.put("msg",msg);
+//output_map.put("driverStatus",driverStatus);
+output_map.put("s",success);
+info "output_map: " + output_map;
+return output_map;
+}
