@@ -1,0 +1,129 @@
+string standalone.order_status_api(String phoneNumber, String saleNumber,String channel)
+{
+sales = Collection();
+msg = "";
+success = false;
+if(phoneNumber.length() == 12)
+{
+	phoneNumber = phoneNumber.subString(2);
+	c = zoho.crm.searchRecords("Contacts","Mobile:equals:" + phoneNumber);
+	if(c.size() > 0)
+	{
+		customerId = c.get(0).get("id");
+		sales = zoho.crm.searchRecords("Sales_Orders","Contact_Name:equals:" + customerId);
+		if(sales.size() == 0)
+		{
+			msg = "We are sorry, we could not find any order associated with this phone number " + phoneNumber + ", please try again";
+			if(channel == "sms")
+			{
+				msg = "We are sorry, we could not find any order associated with this phone number " + phoneNumber;
+			}
+		}
+	}
+	else
+	{
+		msg = "We are sorry, we could not find this phone number " + phoneNumber + ", in our system, please try again";
+		if(channel == "sms")
+		{
+			msg = "We are sorry, we could not find this phone number " + phoneNumber + " in our system.";
+		}
+	}
+}
+else if(saleNumber != "")
+{
+	sales = zoho.crm.searchRecords("Deals","Sales_Number:equals:" + saleNumber);
+	if(sales.size() == 0)
+	{
+		msg = "We are sorry, we could not find any order associated with this number " + saleNumber + ", please try again";
+		if(channel == "sms")
+		{
+			msg = "We are sorry, we could not find any order associated with this # " + saleNumber;
+		}
+	}
+}
+if(sales.size() > 0)
+{
+	foundActiveSales = false;
+	for each  sale in sales
+	{
+		stage = sale.get("Stage");
+		saleNumber = sale.get("Sales_Number");
+		saleNumberDisplay = saleNumber;
+		if(channel == "voice")
+		{
+			saleNumberDisplay = saleNumber.subString(0,1) + " " + saleNumber.subString(1);
+		}
+		info saleNumberDisplay;
+		if(stage == "Ready" || stage == "Pending Payment")
+		{
+			foundActiveSales = true;
+			success = true;
+			if(channel == "sms")
+			{
+				msg = msg + "Order #" + saleNumberDisplay + " is ready for pickup. ";
+			}
+			else
+			{
+				msg = msg + "Order number, " + saleNumberDisplay + ", is ready for pickup. ";
+			}
+		}
+		else if(stage == "In Progress")
+		{
+			saleId = sale.get("id");
+			allSaleOrders = zoho.crm.searchRecords("Sales_Orders","Deal_Name:equals:" + saleId);
+			if(allSaleOrders.size() > 0)
+			{
+				anyReadyOrders = false;
+				for each  order in allSaleOrders
+				{
+					status = order.get("Status");
+					if(status == "Ready")
+					{
+						success = true;
+						foundActiveSales = true;
+						if(channel == "sms")
+						{
+							msg = msg + "Order #" + saleNumberDisplay + ": Some of your items are ready for pickup, while others are still in progress. ";
+						}
+						else
+						{
+							msg = msg + "Order number, " + saleNumberDisplay + ", Some of your items are ready for pickup, while others are still in progress. ";
+						}
+						anyReadyOrders = true;
+						break;
+					}
+				}
+				if(!anyReadyOrders)
+				{
+					success = true;
+					foundActiveSales = true;
+					if(channel == "sms")
+					{
+						msg = msg + "Order #" + saleNumberDisplay + " is still in progress. ";
+					}
+					else
+					{
+						msg = msg + "Order number, " + saleNumberDisplay + ", is still in progress. ";
+					}
+				}
+			}
+		}
+	}
+	if(!foundActiveSales)
+	{
+		if(phoneNumber.length() >= 10)
+		{
+			msg = "All orders on this account have been completed.";
+		}
+		else
+		{
+			msg = "Order number, " + saleNumber + ", have been completed.";
+			if(channel == "sms")
+			{
+				msg = "Order # " + saleNumber + " have been completed.";
+			}
+		}
+		success = true;
+	}
+}
+return msg;}
