@@ -1,0 +1,44 @@
+var currentId = ZDK.Page.getField("Client_Id").getValue();
+var currentKnown = ZDK.Page.getField("Client_is_known_to_me").getValue();
+
+var inputFields = [];
+
+// Determine what is missing
+var idMissing = !currentId;
+var knownMissing = !currentKnown;
+
+if (idMissing) {
+    inputFields.push({ type: 'text', label: 'Client ID' });
+}
+if (knownMissing) {
+    inputFields.push({
+        type: 'picklist',
+        label: 'Is client known to you?',
+        list_options: [
+            { actual_value: 'Yes', display_value: 'Yes' },
+            { actual_value: 'No', display_value: 'No' }
+        ]
+    });
+}
+
+if (inputFields.length > 0) {
+    var response = ZDK.Client.getInput(inputFields, 'Missing Information', 'Save', 'Cancel');
+
+    if (response) {
+        // If BOTH were missing: response[0] is ID, response[1] is Picklist
+        if (idMissing && knownMissing) {
+            ZDK.Page.getField("Client_Id").setValue(response[0]);
+            ZDK.Page.getField("Client_is_known_to_me").setValue(response[1]);
+        } 
+        // If ONLY ID was missing: response[0] is ID
+        else if (idMissing) {
+            ZDK.Page.getField("Client_Id").setValue(response[0]);
+        } 
+        // If ONLY Picklist was missing: response[0] is Picklist
+        else if (knownMissing) {
+            ZDK.Page.getField("Client_is_known_to_me").setValue(response[0]);
+        }
+    } else {
+        return false; // User cancelled
+    }
+}
