@@ -1,0 +1,46 @@
+string standalone.sa_refresh_embeded_sign_link(String crmAPIRequest)
+{
+parameters = crmAPIRequest.get("params");
+requestId = parameters.getJSON("requestId");
+actionId = parameters.getJSON("actionId");
+response = Map();
+headers = Map();
+// REQUIRED response structure
+response.put("status_code",200);
+response.put("headers",headers);
+response.put("Content-Type","text/html; charset=utf-8");
+if(requestId == null || actionId == null)
+{
+	response.put("status_code",400);
+	response.put("body","<h3>Invalid signing link.</h3>");
+	return {"crmAPIResponse":response};
+}
+signDocumentUrl = "https://sign.zoho.com/api/v1/requests/" + requestId + "/actions/" + actionId + "/embedtoken?host=https://sign.zoho.com/";
+signResp = invokeurl
+[
+	url :signDocumentUrl
+	type :post
+	connection:"zoho_sign"
+];
+signUrl = signResp.getJSON("sign_url");
+if(signResp.get("code") != 0 || signUrl == null)
+{
+	msg = signResp.get("message");
+	if(msg == null)
+	{
+		msg = "This document cannot be opened for signing. It may already be signed or expired.";
+	}
+	response.put("body","<h3>" + msg + "</h3>");
+	return {"crmAPIResponse":response};
+}
+// Anti-cache headers
+headers.put("Cache-Control","no-store, no-cache, must-revalidate, max-age=0");
+headers.put("Pragma","no-cache");
+headers.put("Expires","0");
+headers.put("X-ZOHO-SOURCE","CRM");
+// Page with user-triggered isolated window
+// html = "<html><head>" + "<meta http-equiv='Cache-Control' content='no-store, no-cache, must-revalidate, max-age=0'/>" + "<meta http-equiv='Pragma' content='no-cache'/>" + "<meta http-equiv='Expires' content='0'/>" + "</head><body style='font-family:Arial'>" + "<h3>Open Contract</h3>" + "<p>Click the button below to open your signing session.</p>" + "<p>" + "<button style='padding:12px 18px;border:1px solid #000;border-radius:6px;background:#fff;cursor:pointer;' " + "onclick=\"window.open('" + signUrl + "','ZohoSignWindow','noopener,noreferrer,width=1100,height=800');\">" + "Open Contract" + "</button>" + "</p>" + "<p style='font-size:12px;color:#555;margin-top:16px'>" + "If you experience issues, please try a different browser or private window." + "</p>" + "</body></html>";
+html = "<html>" + "<head>" + "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate, max-age=0\"/>" + "<meta http-equiv=\"Pragma\" content=\"no-cache\"/>" + "<meta http-equiv=\"Expires\" content=\"0\"/>" + "<style>" + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;" + "background:#f7f8fa;margin:0;padding:0;}" + ".container{max-width:480px;margin:80px auto;background:#fff;" + "padding:32px;border-radius:12px;" + "box-shadow:0 10px 30px rgba(0,0,0,0.08);text-align:center;}" + "h2{margin-top:0;color:#111;}" + "p{color:#555;line-height:1.5;}" + "button{margin-top:24px;padding:14px 26px;font-size:16px;" + "border-radius:8px;border:none;background:#0b5cff;color:#fff;cursor:pointer;}" + "button:hover{background:#0846c7;}" + ".footer{margin-top:20px;font-size:12px;color:#888;}" + "</style>" + "</head>" + "<body>" + "<div class=\"container\">" + "<h2>Document Ready for Signature</h2>" + "<p>Please click the button below to securely open your document and complete the signing process.</p>" + "<button onclick=\"window.open('" + signUrl + "','ZohoSignWindow','noopener,noreferrer,width=1100,height=800');\">" + "Open Document" + "</button>" + "<div class=\"footer\">" + "If you experience issues, try a different browser or private window." + "</div>" + "</div>" + "</body>" + "</html>";
+response.put("body",html);
+return {"crmAPIResponse":response};
+}
