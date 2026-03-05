@@ -1,0 +1,94 @@
+string standalone.send_document_to_zoho_sign(Int dealId,String templateId)
+{
+response = null;
+// updated
+clientId = null;
+clientName = "";
+// Data Variable
+nowDate = now.toDate().toString("MM/dd/yyyy");
+if(dealId != null)
+{
+	info "inside deal not null";
+	dealDetails = zoho.crm.getRecordById("Deals",dealId.toLong());
+	account = dealDetails.get("Account_Name");
+	contact = dealDetails.get("Contact_Name");
+	if(contact != null)
+	{
+		contactRecord = zoho.crm.getRecordById("Contacts",contact.get("id"));
+		clientEmail = contactRecord.get("Email");
+	}
+	if(account != null)
+	{
+		accountId = account.get("id");
+		clientName = account.get("name");
+		clientDetails = zoho.crm.getRecordById("Accounts",accountId);
+		info "clientDetails";
+		info clientDetails;
+		if(clientEmail == null)
+		{
+			clientEmail = clientDetails.get("Main_Email_address");
+		}
+		templateDetails = zoho.sign.getTemplateById(templateId,"zoho_sign");
+		actionId = templateDetails.get("templates").get("actions").get(0).get("action_id");
+		if(clientEmail != null)
+		{
+			contactName = dealDetails.get("Contact_Name").get("name");
+			// assembling address to put in contract
+			addressLine1 = clientDetails.get("Street").proper();
+			addressLine2 = clientDetails.get("Address_Line_2");
+			city = clientDetails.get("City").proper();
+			state = clientDetails.get("State").toUpperCase();
+			zip = clientDetails.get("Zip");
+			country = clientDetails.get("Country").toUpperCase();
+			companyAddress = addressLine1;
+			// only add Address_Line_2 if it exists and is not empty
+			if(addressLine2 != null && addressLine2.trim() != "")
+			{
+				companyAddress = companyAddress + ", " + addressLine2.proper();
+			}
+			// assemble remaining components
+			companyAddress = companyAddress + ", " + city + ", " + state;
+			if(zip != null && zip.trim() != "")
+			{
+				companyAddress = companyAddress + " " + zip;
+			}
+			companyAddress = companyAddress + ", " + country;
+			info "companyAddress " + companyAddress;
+			actionMap = Map();
+			fieldsTextData = Map();
+			fieldsDateData = Map();
+			fieldsTextData.put("Company",clientName);
+			fieldsTextData.put("Company Address",companyAddress);
+			fieldsTextData.put("Contact Name",contactName);
+			fieldsDateData.put("Signature Date",nowDate);
+			// Put Fields to Template
+			actionMap.put("field_data",{"field_text_data":fieldsTextData,"field_date_data":fieldsDateData});
+			actionMap.put("request_name","Profyle Contract - " + clientName);
+			cd = {"source":"CRM","module":"Deals","record":dealId};
+			actionMap.put("custom_data",cd.toString());
+			// Document Actions
+			eachActionMap1 = Map();
+			eachActionMap1.put("recipient_name",clientName);
+			eachActionMap1.put("recipient_email",clientEmail);
+			eachActionMap1.put("action_type","SIGN");
+			eachActionMap1.put("action_id",actionId);
+			// profyle
+			eachActionMap1.put("role","Client");
+			eachActionMap1.put("verify_recipient","false");
+			eachActionMap1.put("is_embedded",true);
+			//
+			fieldList = List();
+			fieldList.add(eachActionMap1);
+			actionMap.put("actions",fieldList);
+			submitMap = Map();
+			submitMap.put("templates",actionMap);
+			parameters = Map();
+			parameters.put("is_quicksend",true);
+			parameters.put("data",submitMap);
+			response = zoho.sign.createUsingTemplate(templateId,parameters,"zoho_sign");
+		}
+	}
+}
+// return "";
+return response;
+}
