@@ -1,0 +1,87 @@
+string standalone.extract_8655_form(String zsdId,String fileContent)
+{
+error = "";
+try 
+{
+	info "zsdId: " + zsdId;
+	info "fileContent: " + fileContent;
+	if(fileContent == null)
+	{
+		attachments = zoho.crm.getRelatedRecords("Attachments","zohosign__ZohoSign_Documents",zsdId);
+		for each  record in attachments
+		{
+			file_id = record.get("id");
+			foundFile = false;
+			fileName = record.get("File_Name");
+			info "fileName: " + fileName;
+			if(fileName != null && fileName.toLowerCase().contains("signed"))
+			{
+				downloadFile = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v5/zohosign__ZohoSign_Documents/" + zsdId + "/Attachments/" + file_id
+					type :GET
+					connection:"zoho_crm"
+				];
+				foundFile = true;
+				break;
+			}
+		}
+	}
+	else
+	{
+		downloadFile = fileContent;
+		foundFile = true;
+	}
+	info "foundFile: " + foundFile;
+	if(foundFile == true)
+	{
+		inputOptions = Map();
+		inputOptions.put("page_ranges",{"3-5"});
+		// Extracts pages 1 and 2
+		inputOptions.put("format","pdf");
+		outputSettings = Map();
+		outputSettings.put("name","form_8655.pdf");
+		outputSettings.put("single_pdf",true);
+		paramList = list();
+		paramMap1 = {"paramName":"file","content":downloadFile};
+		paramMap2 = {"paramName":"input_options","content":inputOptions.toString(),"Content-Type":"application/json","stringPart":"true"};
+		paramMap3 = {"paramName":"output_settings","content":outputSettings.toString(),"Content-Type":"application/json","stringPart":"true"};
+		paramList.add(paramMap1);
+		paramList.add(paramMap2);
+		paramList.add(paramMap3);
+		extractedFileResponse = invokeurl
+		[
+			url :"https://zohoapis.com/pdfeditor/api/v1/pdf/pages/extract"
+			type :POST
+			files:paramList
+			connection:"zoho_writer_conn"
+		];
+		info "extractedFileResponse: " + extractedFileResponse;
+		if(extractedFileResponse != null && extractedFileResponse.get("status_check_url") != null)
+		{
+			statusUrl = extractedFileResponse.get("status_check_url");
+			updateMap = Map();
+			updateMap.put("form_status_link",statusUrl);
+			updateMap.put("send_8655_form",zoho.currenttime.addMinutes(2).toString("yyyy-MM-dd'T'HH:mm:ss","America/New_York"));
+			info zoho.crm.updateRecord("zohosign__ZohoSign_Documents",zsdId,updateMap);
+		}
+		else
+		{
+			error = "extract_8655_form: status_check_url not found";
+			throws "Error happend, email not sent - ";
+		}
+	}
+}
+catch (e)
+{
+	info "Error: " + e;
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :"fishel@theswiftygroup.com"
+		subject :"Megapay Error please fix ASAP -  extract_8655_form function"
+		message :"Function:  extract_8655_form - Error: " + e + " -  " + error
+	]
+}
+return "";
+}
