@@ -1,0 +1,142 @@
+var need_timekeeping     = ZDK.Page.getField("Need_timekeeping").getValue();
+var need_HR_Onboarding   = ZDK.Page.getField("Need_HR_Onboarding").getValue();
+var need_HR_compliance    = ZDK.Page.getField("Need_HR_compliance").getValue();
+var do_you_need_us_to_file_the  = ZDK.Page.getField("Do_you_need_us_to_file_the_NYS_100").getValue();
+
+// Individual field validation
+if (need_timekeeping == null || need_timekeeping === "") {
+    ZDK.Client.showMessage("Error: Please specify if you need Timekeeping.", { type: 'error' });
+    return false;
+}
+
+if (need_HR_Onboarding == null || need_HR_Onboarding === "") {
+    ZDK.Client.showMessage("Error: Please specify if you need HR Onboarding.", { type: 'error' });
+    return false;
+}
+
+if (need_HR_compliance == null || need_HR_compliance === "") {
+    ZDK.Client.showMessage("Error: Please specify if you need HR Compliance.", { type: 'error' });
+    return false;
+}
+
+if (do_you_need_us_to_file_the == null || do_you_need_us_to_file_the === "") {
+    ZDK.Client.showMessage("Error: Please specify if you need us to register in state.", { type: 'error' });
+    return false;
+}
+
+
+var contactLookup = ZDK.Page.getField("Contact_Name").getValue(); 
+
+    // Verify a contact is actually selected on the Deal
+    if (contactLookup == null || contactLookup === "" || !contactLookup.id) {
+        ZDK.Client.showMessage("Error: Cannot find a contact record associated with this deal", { type: 'error' });
+        return false;
+    }
+
+    try {
+        // 2. Fetch the Contact record from the database using its ID
+        var contactRecord = await ZDK.Apps.CRM.Contacts.fetchById(contactLookup.id);
+        
+        // 3. Extract the email (Default API name is "Email")
+        var contactEmail = contactRecord.Email; 
+
+        // 4. Validate if the email is missing
+        if (contactEmail == null || contactEmail === "") {
+            ZDK.Client.showMessage("Error: The associated Contact does not have an email address. Please update the Contact record.", { type: 'error' });
+            return false;
+        }
+
+    } catch (error) {
+        // Safeguard in case the API call fails or permissions block it
+        ZDK.Client.showMessage("Error: Failed to verify Contact email details.", { type: 'error' });
+        return false;
+    }
+
+
+let inputFields = [];
+    inputFields.push({ type: 'text', label: 'Client ID' });
+
+    inputFields.push({
+        type: 'picklist',
+        label: 'Is client known to you?',
+        list_options: [
+            { actual_value: 'Yes', display_value: 'Yes' },
+            { actual_value: 'No', display_value: 'No' }
+        ],
+        value: ''
+    });
+
+
+
+
+let isValid = false;
+let response;
+
+// Loop to keep the prompt open if validation fails
+while (!isValid) {
+    response = ZDK.Client.getInput(inputFields, 'Please provide the following information', 'Send', 'Cancel');
+
+    // 1. Check if user clicked 'Cancel' or closed the prompt
+    if (!response) {
+        return false; 
+    }
+
+    let clientId = response[0] ? response[0].toString().trim() : '';
+    let knowClient = response[1] ? response[1].toString().trim() : '';
+
+    // 2. Validation Logic
+    if (clientId === '' || knowClient === '') {
+        ZDK.Client.showMessage("Error: Both 'Client ID' and 'Is client known to you?' fields are required.", { type: 'error' });
+        
+        // Repopulate the fields so the user doesn't have to retype what they already entered
+        inputFields[0].value = clientId;
+        inputFields[1].value = knowClient;
+        
+        continue; // Restarts the loop, opening the input prompt again
+    }
+
+    // If both fields have values, break the loop
+    isValid = true;
+}
+
+// var response = ZDK.Client.getInput(inputFields, 'Please provide the following information', 'Send', 'Cancel');
+
+    if (response) {
+
+        let recrodId = $Page.record_id.toString();
+        log("response[0]: "+response[0]);
+
+        log("response[0]: " + response[0]);
+        log("response[1]: "+response[1]);
+        log("recrodId: "+recrodId);
+
+    ZDK.Client.showLoader({ type: 'page', template: 'vertical-bar', message: 'Processing...' });
+
+       let  clientId = response[0].toString();
+        let knowClient = response[1];
+   
+ try {
+        let response =  ZDK.Apps.CRM.Functions.execute("generate_zoho_form", {dealId: recrodId, cleintId: clientId ,knowClient: knowClient});
+        log(JSON.stringify("response: "+response));
+        log(JSON.stringify("response.details: "+response.details));
+
+        log(JSON.stringify("response.details.output: "+response.details.output));
+
+ ZDK.Client.hideLoader();
+
+        if (response && response.details && response.details.output != "") {
+                ZDK.Client.showMessage("New sign-up form sent successfully!", { type: 'success' });
+        } else {
+            ZDK.Client.showMessage("Error sending form.", { type: 'warning' });
+        }
+    } catch (e) {
+        log("Error: " + JSON.stringify(e));
+        ZDK.Client.hideLoader();
+ } finally {
+                ZDK.Client.hideLoader();
+
+    }
+     
+    } else {
+        return false; // User cancelled
+    }
